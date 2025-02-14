@@ -54,7 +54,7 @@
             const horaObjetivo = new Date(2025, 1, 14, 13, 0, 0); // 14 de febrero de 2025 a las 7:00 AM
 
             if (ahora >= horaObjetivo) {
-                window.location.href = "carta.html"; // Cambia esto por la URL de tu página
+                window.location.href = "rosas.html"; // Cambia esto por la URL de tu página
             } else {
                 const tiempoRestante = horaObjetivo - ahora;
                 const horas = Math.floor((tiempoRestante % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -69,8 +69,8 @@
 </head>
 <body>
     <div>
-        <h1>Esperando a que sea la hora...</h1>
-        <h2><span class="sorpresa">🎁</span> Para la siguiente sorpresa <span class="sorpresa">🎁</span></h2>
+        <h1>Esperando...</h1>
+        <h2><span class="sorpresa">🎁</span> Para la siguiente sorpresa! <span class="sorpresa">🎁</span></h2>
         <div class="corazon">❤️</div>
         <div class="contador" id="contador">Cargando...</div>
     </div>
