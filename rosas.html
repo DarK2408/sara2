@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruleta de la fortuna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Marck+Script&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Marck Script", serif;
+        background-color: #ffe6e6;
+        color: #d10000;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      height: 100vh;
+      text-align: center;
+    }
+
+
+    #spinWheel {
+      display: inline-block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #spinWheel::after {
+      content: "";
+      position: absolute;
+      top: 0px;
+      left: calc(50% - 10px);
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 20px solid #feeb69;
+      -webkit-filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, .5));
+      filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, .5));
+    }
+
+    #wheel {
+      display: block;
+    }
+
+    #spin {
+      user-select: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      top: 60%;
+      left: 60%;
+      width: 10%;
+      height: 10%;
+      margin: -15%;
+      background: #333;
+      color: #fff;
+      box-shadow: 0 0 0 4px currentColor, 0 0px 10px 5px rgba(0, 0, 0, 0.6);
+      border-radius: 50%;
+      transition: 0.8s;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: #333;
+    }
+    .btn {
+    margin-top: 20px;
+}
+.btn button {
+    font-family: "Marck Script", serif;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #d10000;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 18px;
+}
+.btn button:hover {
+    background-color: #ff4d4d;
+}
+
+
+
+  </style>
+</head>
+
+<body>
+  <h1>La rueda de la fortuna ❤️</h1>
+  <h2>Reclama cuando quieras</h2>
+  <div id="spinWheel">
+    <canvas id="wheel" width="400" height="400"></canvas>
+    <div id="spin"></div>
+  </div>
+  <div id="result"></div>
+  <div class="btn">
+    <button onclick="location.href='espera5.html'">Continuar</button>
+</div>
+  <script>
+    class SpinWheel {
+      constructor({ canvasSelector, buttonSelector, sectors, friction = 0.991 }) {
+        this.sectors = sectors;
+        this.friction = friction;
+        this.canvas = document.querySelector(canvasSelector);
+        this.context = this.canvas.getContext("2d");
+        this.button = document.querySelector(buttonSelector);
+        this.diameter = this.canvas.width;
+        this.radius = this.diameter / 2;
+        this.totalSectors = sectors.length;
+        this.arcAngle = (2 * Math.PI) / this.totalSectors;
+        this.angle = 0;
+        this.angularVelocity = 0;
+        this.spinButtonClicked = false;
+        this.events = new EventEmitter();
+        this.init();
+      }
+
+      get currentIndex() {
+        return Math.floor(this.totalSectors - (this.angle / (2 * Math.PI)) * this.totalSectors) % this.totalSectors;
+      }
+
+      drawSector(sector, index) {
+        const startAngle = this.arcAngle * index;
+        this.context.save();
+
+        // Draw sector
+        this.context.beginPath();
+        this.context.fillStyle = sector.color;
+        this.context.moveTo(this.radius, this.radius);
+        this.context.arc(this.radius, this.radius, this.radius, startAngle, startAngle + this.arcAngle);
+        this.context.lineTo(this.radius, this.radius);
+        this.context.fill();
+
+        // Add label
+        this.context.translate(this.radius, this.radius);
+        this.context.rotate(startAngle + this.arcAngle / 2);
+        this.context.textAlign = "right";
+        this.context.fillStyle = sector.textColor;
+        this.context.font = "bold 30px 'Lato', sans-serif";
+        this.context.fillText(sector.label, this.radius - 10, 10);
+
+        this.context.restore();
+      }
+
+      rotateCanvas() {
+        const currentSector = this.sectors[this.currentIndex];
+        this.canvas.style.transform = `rotate(${this.angle - Math.PI / 2}rad)`;
+      }
+
+      updateFrame() {
+        // Stop spinning and emit event
+        if (!this.angularVelocity && this.spinButtonClicked) {
+          const winningSector = this.sectors[this.currentIndex];
+          this.events.emit("finishSpinning", winningSector);
+          this.spinButtonClicked = false;
+          return;
+        }
+
+        // Apply friction to reduce angular velocity
+        this.angularVelocity *= this.friction;
+        if (this.angularVelocity < 0.002) this.angularVelocity = 0; // Stop completely
+
+        // Update angle
+        this.angle += this.angularVelocity;
+        this.angle %= 2 * Math.PI; // Normalize angle
+
+        this.rotateCanvas();
+      }
+
+      startSimulation() {
+        const animate = () => {
+          this.updateFrame();
+          requestAnimationFrame(animate);
+        };
+        animate();
+      }
+
+      init() {
+        this.sectors.forEach((sector, index) => this.drawSector(sector, index));
+        this.rotateCanvas();
+        this.startSimulation();
+
+        this.button.addEventListener("click", () => {
+          if (!this.angularVelocity) this.angularVelocity = SpinWheel.randomInRange(0.25, 0.45);
+          this.spinButtonClicked = true;
+        });
+      }
+
+      static randomInRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+    }
+
+    class EventEmitter {
+      constructor() {
+        this.listeners = {};
+      }
+
+      on(eventName, callback) {
+        if (!this.listeners[eventName]) {
+          this.listeners[eventName] = [];
+        }
+        this.listeners[eventName].push(callback);
+      }
+
+      emit(eventName, ...args) {
+        if (this.listeners[eventName]) {
+          this.listeners[eventName].forEach(callback => callback(...args));
+        }
+      }
+    }
+
+    // Define sectors
+    const wheelSectors = [
+      { color: "#ff1493 ", textColor: "#ffffff", label: "Sorpresa" },
+      { color: "#ff59a4", textColor: "#ffffff", label: "Abrazos  " },
+      { color: "#ff80b6", textColor: "#ffffff", label: "Besos" },
+      { color: "#ffa2c7", textColor: "#ffffff", label: "Canción " },
+      { color: "#ffc2da", textColor: "#ffffff", label: "Besos" },
+      { color: "#ffe1ec", textColor: "#ffa2c7", label: "Desafío  " },
+      { color: "#ffffff", textColor: "#ff80b6", label: "Besos" },
+      { color: "#ffe1ec", textColor: "#ffa2c7", label: "Abrazos  " },
+      { color: "#ffc2da", textColor: "#ffffff", label: "Besos" },
+      { color: "#ffa2c7", textColor: "#ffffff", label: "Fotos " },
+      { color: "#ff80b6", textColor: "#ffffff", label: "Besos" },
+      { color: "#ff59a4", textColor: "#ffffff", label: "Abrazos  " },
+    ];
+
+    // Initialize the wheel
+    const spinWheel = new SpinWheel({
+      canvasSelector: "#wheel",
+      buttonSelector: "#spin",
+      sectors: wheelSectors,
+    });
+
+    // Listen for spin end event
+    spinWheel.events.on("finishSpinning", (sector) => {
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerText = `¡Felicidades! Ganaste: ${sector.label}`;
+    });
+
+  </script>
+</body>
+
+</html>
